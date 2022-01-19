@@ -71,12 +71,11 @@ default_template = """
     catch(err) {
         console.log(err);
     }
-    """
-
+"""
 
 
 class Configuration:
-    def __init__(self) -> None:
+    def __init__(self):
         self.frida_cmd = """frida -U --attach-name="com.example.app" -l gen.js --no-pause"""
         self.template = default_template
         if os.path.exists("IDAFrida.json"):
@@ -95,7 +94,7 @@ class Configuration:
     
     def store(self):
         try:
-            data = {"frida_cmd" : self.frida_cmd, "template": self.template}
+            data = {"frida_cmd": self.frida_cmd, "template": self.template}
             open("IDAFrida.json", "w").write(json.dumps(data))
         except Exception as e:
             print(e)
@@ -112,7 +111,7 @@ class Configuration:
 global_config = Configuration()
 
 class ConfigurationUI(QDialog):
-    def __init__(self, conf : Configuration) -> None:
+    def __init__(self, conf):
         super(ConfigurationUI, self).__init__()
         self.conf = conf
         self.edit_template = QTextEdit()
@@ -121,15 +120,15 @@ class ConfigurationUI(QDialog):
         layout.addWidget(self.edit_template)
         self.setLayout(layout)
 
-    def closeEvent(self, a0) -> None:
+    def closeEvent(self, a0):
         self.conf.set_template(self.edit_template.toPlainText())
         self.conf.store()
-        return super().closeEvent(a0)
+        return super(ConfigurationUI, self).closeEvent(a0)
 
 
 
 class ScriptGenerator:
-    def __init__(self, configuration : Configuration) -> None:
+    def __init__(self, configuration):
         self.conf = configuration
 
     @staticmethod
@@ -140,24 +139,24 @@ class ScriptGenerator:
     def get_idb_path():
         return os.path.dirname(idaapi.get_input_file_path())
 
-    def generate_stub(self, repdata: dict):
+    def generate_stub(self, repdata):
         s = self.conf.template
         for key, v in repdata.items():
             s = s.replace("[%s]" % key, v)
         return s
 
-    def generate_for_funcs(self, func_addr_list) -> str:
+    def generate_for_funcs(self, func_addr_list):
         stubs = []
         for func_addr in func_addr_list:
             repdata = {
                 "filename" : self.get_idb_filename(),
                 "funcname" : ida_funcs.get_func_name(func_addr),
-                "offset" : hex(func_addr) 
+                "offset" : hex(func_addr).rstrip("L")
             }
             stubs.append(self.generate_stub(repdata))
         return "\n".join(stubs)
 
-    def generate_for_funcs_to_file(self, func_addr_list, filename) -> bool:
+    def generate_for_funcs_to_file(self, func_addr_list, filename):
         data = self.generate_for_funcs(func_addr_list)
         try:
             open(filename, "w").write(data)
@@ -168,7 +167,7 @@ class ScriptGenerator:
 
 
 class Frida:
-    def __init__(self, conf: Configuration) -> None:
+    def __init__(self, conf):
         self.conf = conf
 
 class IDAFridaMenuAction(Action):
@@ -176,10 +175,10 @@ class IDAFridaMenuAction(Action):
     def __init__(self):
         super(IDAFridaMenuAction, self).__init__()
 
-    def activate(self, ctx) -> None:
+    def activate(self, ctx):
         raise NotImplemented
 
-    def update(self, ctx) -> None:
+    def update(self, ctx):
         if ctx.form_type == idaapi.BWN_FUNCS:
             idaapi.attach_action_to_popup(ctx.widget, None, self.name, self.TopDescription + "/")
             return idaapi.AST_ENABLE_FOR_WIDGET
